@@ -1,3 +1,7 @@
-module Control.Agent.Free where
+module Control.Agent.Free (
+    Agent,
+) where
 
 import Control.Agent.Free.Internal
+
+

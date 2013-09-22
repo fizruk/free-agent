@@ -20,6 +20,7 @@ Library
   Other-Modules:        Control.Agent.Free.Internal
   Build-Depends:        base >= 4 && < 5
                       , free >= 3.4.2
+                      , demarcate >= 0.1
 
 Test-Suite spec
   Type:                 exitcode-stdio-1.0
