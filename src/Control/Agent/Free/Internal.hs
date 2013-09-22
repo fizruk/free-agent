@@ -2,9 +2,12 @@
 
 module Control.Agent.Free.Internal (
     Agent(..),
+    liftCmd,
 ) where
 
-import Control.Monad.Free
+import Control.Monad.Free.Class
+import Control.Monad.Trans.Class
+
 import Control.Monad.Trans.Demarcate
 
 -- | An @Agent t f a@ is a program which uses functor @f@ as a low-level
@@ -20,4 +23,19 @@ data Agent t f a = Agent
   { agentRun  :: forall m b. (Monad m) => t m b -> m b
   , agentPrg  :: forall m. (MonadFree f m) => Demarcate t m a
   }
+
+-- | Turn an API functor into a polymorphic DSL command for agent
+-- programming. An example of typical use:
+--
+-- @
+-- data API next
+--    = Output String next
+--    | Input (String -> next)
+--    deriving (Functor)
+--
+-- output s = liftCmd $ Output s ()
+-- input    = liftCmd $ Input id
+-- @
+liftCmd :: (Functor f, MonadFree f m, MonadTrans t) => f a -> t m a
+liftCmd = lift . liftF
 
