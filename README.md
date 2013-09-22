@@ -1,5 +1,7 @@
 # free-agent
 
+[![Build Status](https://secure.travis-ci.org/fizruk/free-agent.png?branch=master)](http://travis-ci.org/fizruk/free-agent)
+
 This package provides a general framework for multi agent systems.
 Agent-environment interface is implemented using free monads.
 
