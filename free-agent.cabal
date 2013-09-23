@@ -3,6 +3,7 @@ Version:                0.0.0
 Author:                 Nickolay Kudasov<nickolay.kudasov@gmail.com>
 Maintainer:             Nickolay Kudasov<nickolay.kudasov@gmail.com>
 Homepage:               https://github.com/fizruk/free-agent
+Bug-Reports:            https://github.com/fizruk/free-agent/issues
 License:                BSD3
 License-File:           LICENSE
 Synopsis:               Multi agent systems based on free monads.
@@ -11,6 +12,8 @@ Description:
   Agent-environment interface is implemented using free monads.
 Cabal-Version:          >= 1.10
 Build-Type:             Simple
+Stability:              experimental
+Category:               Control
 
 Library
   Default-Language:     Haskell2010
