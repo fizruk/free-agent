@@ -11,7 +11,7 @@
 -- Agents for free.
 ---------------------------------------------------------------------------
 module Control.Agent.Free (
-    Agent(..),
+    Agent, runAgent,
     liftCmd,
 ) where
 

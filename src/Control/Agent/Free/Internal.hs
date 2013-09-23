@@ -1,4 +1,3 @@
-{-# LANGUAGE Rank2Types #-}
 ---------------------------------------------------------------------------
 -- |
 -- Module      :  Control.Agent.Free.Internal
@@ -13,7 +12,7 @@
 ---------------------------------------------------------------------------
 module Control.Agent.Free.Internal where
 
-import Control.Monad.Free.Class
+import Control.Monad.Free
 import Control.Monad.Trans.Class
 
 import Control.Monad.Trans.Demarcate
@@ -27,12 +26,11 @@ import Control.Monad.Trans.Demarcate
 -- for the possibility of `behaviosites' (see
 -- http://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.114.4071 for
 -- more details).
-data Agent t f a = Agent
-  { -- | Default evaluation for @t@ monad transformer.
-    agentRun  :: forall m b. (Monad m) => t m b -> m b
-  , -- | Program of an agent.
-    agentPrg  :: forall m. (MonadFree f m) => Demarcate t m a
-  }
+type Agent t f = Demarcate t (Free f)
+
+-- | Turn agent program into a @t (Free f) a@ free monadic value.
+runAgent :: (Functor f, Monad (t (Free f)), MonadTrans t) => Agent t f a -> t (Free f) a
+runAgent = execDemarcate
 
 -- | Turn an API functor into a polymorphic DSL command for agent
 -- programming. An example of typical use:
