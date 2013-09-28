@@ -10,8 +10,8 @@ Agent-environment interface is implemented using free monads.
 You can simply clone this repository and run `cabal-install`:
 
 ```
-$ git clone https://github.com/fizruk/demarcate.git
-$ cd demarcate
+$ git clone https://github.com/fizruk/free-agent.git
+$ cd free-agent
 $ cabal install
 ```
 
