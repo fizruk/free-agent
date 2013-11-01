@@ -16,7 +16,7 @@ module Control.Agent.Free.Interpret where
 
 import Control.Monad.Trans.Class
 import Control.Monad.Free
-import Control.Agent.Free
+import Control.Agent.Free.Internal
 import Control.Monad (void)
 
 -- | Interpretation of free monadic values.
