@@ -14,7 +14,7 @@ module Control.Agent.Free.Internal where
 
 import Control.Monad.Free
 import Control.Monad.Trans.Class
-
+import Control.Monad.Trans.Identity
 import Control.Monad.Trans.Demarcate
 
 -- | An @Agent t f a@ is a program which uses functor @f@ as a low-level
@@ -27,6 +27,9 @@ import Control.Monad.Trans.Demarcate
 -- http://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.114.4071 for
 -- more details).
 type Agent t f = Demarcate t (Free f)
+
+-- | An 'Agent' without any exposed structure.
+type Agent' f = Agent IdentityT f
 
 -- | Turn agent program into a @t (Free f) a@ free monadic value.
 runAgent :: (Functor f, Monad (t (Free f)), MonadTrans t) => Agent t f a -> t (Free f) a
