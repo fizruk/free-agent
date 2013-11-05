@@ -13,6 +13,7 @@
 module Control.Agent.Free (
   module Control.Agent.Free.Interpret,
   Agent,
+  Agent',
   runAgent,
   liftCmd,
 ) where
