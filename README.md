@@ -15,9 +15,9 @@ $ cd free-agent
 $ cabal install
 ```
 
-## Usage
+## Documentation
 
-TODO: Write usage instructions here
+Haddock documentation is available at http://fizruk.github.io/free-agent/docs/
 
 ## How to run tests
 
@@ -27,4 +27,8 @@ cabal configure --enable-tests && cabal build && cabal test
 
 ## Contributing
 
-TODO: Write contribution instructions here
+Contributions and bug reports are welcome!
+
+Please feel free to contact me via GitHub or on the #haskell IRC channel on irc.freenode.net.
+
+-Nickolay Kudasov
