@@ -12,7 +12,6 @@ import Control.Monad.Reader
 import Control.Monad.Trans.Identity
 
 import Control.Agent.Free
-import Control.Agent.Free.Interpret
 
 import Control.Concurrent.STM
 import Control.Concurrent
@@ -52,23 +51,23 @@ data ABTF next
 -- XXX: boilerplate code
 -- =================================================================
 
-sendOk :: (MonadFree ABTF m, Monad (t m), MonadTrans t, MonadTrans t') => AgentId -> AgentValue -> t' (t m) ()
-sendOk n x = lift . liftCmd $ SendOk  n x ()
+sendOk :: MonadFree ABTF m => AgentId -> AgentValue -> m ()
+sendOk n x = liftF $ SendOk n x ()
 
-sendNoGood :: (MonadFree ABTF m, Monad (t m), MonadTrans t, MonadTrans t') => NoGood -> t' (t m) ()
-sendNoGood ngd = lift . liftCmd $ SendNoGood ngd ()
+sendNoGood :: MonadFree ABTF m => NoGood -> m ()
+sendNoGood ngd = liftF $ SendNoGood ngd ()
 
-sendStop :: (MonadFree ABTF m, Monad (t m), MonadTrans t, MonadTrans t') => t' (t m) ()
-sendStop = lift . liftCmd $ SendStop ()
+sendStop :: MonadFree ABTF m => m ()
+sendStop = liftF $ SendStop ()
 
-getMsg :: (MonadFree ABTF m, Monad (t m), MonadTrans t, MonadTrans t') => t' (t m) AgentMsg
-getMsg = lift . liftCmd $ GetMsg id
+getMsg :: MonadFree ABTF m => m AgentMsg
+getMsg = liftF $ GetMsg id
 
-dumpState :: (MonadFree ABTF m, Monad (t m), MonadTrans t, MonadTrans t') => AgentState -> t' (t m) ()
-dumpState s = lift . liftCmd $ DumpState s ()
+dumpState :: MonadFree ABTF m => AgentState -> m ()
+dumpState s = liftF $ DumpState s ()
 
-dumpString :: (MonadFree ABTF m, Monad (t m), MonadTrans t, MonadTrans t') => String -> t' (t m) ()
-dumpString s = lift . liftCmd $ DumpString s ()
+dumpString :: MonadFree ABTF m => String -> m ()
+dumpString s = liftF $ DumpString s ()
 
 -- =================================================================
 
@@ -101,7 +100,7 @@ initAgentState = AgentState
   , agentId          = error "agent ID is not set"
   }
 
-type A = StateT AgentState (Agent IdentityT ABTF)
+type A = StateT AgentState (Agent ABTF IdentityT)
 
 data AgentProps = AgentProps
   { agChan  :: TChan AgentMsg
@@ -123,59 +122,59 @@ newtype ABT a = ABT { runABT :: ReaderT AbtState IO a } deriving (Functor, Monad
 data Constraint var = ConstraintNE var var deriving (Eq, Ord, Show)
 
 exec :: AgentState -> A a -> ABT a
-exec s = execAgent runIdentityT . flip evalStateT s
+exec s = runIdentityT . execAgent interpretF . flip evalStateT s
 
 execABT :: Map AgentId AgentProps -> ABT a -> IO a
 execABT agents = flip runReaderT initAbtState{abtAgents=agents} . runABT
 
-instance MonadInterpret ABTF ABT where
-    interpretF (GetMsg next) = do
-      agId <- asks abtAgentId
-      liftIO . putStrLn $ "DEBUG: Agent " ++ show agId ++ " is waiting for a message"
-      chan <- asks $ agChan . (Map.! agId) . abtAgents
-      msg  <- liftIO . atomically $ readTChan chan
-      liftIO . putStrLn $ "DEBUG: Agent " ++ show agId ++ " reads a message"
-      next msg
-    interpretF (SendOk dst val next) = do
-      agId <- asks abtAgentId
-      chan <- asks $ agChan . (Map.! dst) . abtAgents
-      let msg = MsgOk agId val
-      liftIO . atomically $ writeTChan chan msg
-      liftIO . putStrLn $ "DEBUG: Agent " ++ show agId ++ " sent MsgOk"
-      next
-    interpretF (SendNoGood ngd next) = do
-      agId <- asks abtAgentId
-      let dst = fst . ngdRHS $ ngd
-      chan <- asks $ agChan . (Map.! dst) . abtAgents
-      let msg = MsgNoGood agId ngd
-      liftIO . atomically $ writeTChan chan msg
-      liftIO . putStrLn $ "DEBUG: Agent " ++ show agId ++ " sent MsgNoGood"
-      next
-    interpretF (SendStop next) = do
-      cs <- asks $ map agChan . Map.elems . abtAgents
-      forM_ cs $ \chan -> do
-        liftIO . atomically $ writeTChan chan MsgStop
-      next
-    interpretF (DumpState s next) = do
-      agId <- asks abtAgentId
-      liftIO $ do
-        putStrLn $ show agId ++ ": =============================================="
-        putStrLn $ show agId ++ ": Agent State Dump:"
-        mapM_ (\(str, f) -> putStrLn $ show agId ++ ": " ++ str ++ " " ++ f s) $
-          [ ("ID:         ", show . agentId)
-          , ("Value:      ", show . agentValue)
-          , ("Constrains: ", show . agentConstraints)
-          , ("Above:      ", show . agentAbove)
-          , ("Below:      ", show . agentBelow)
-          , ("View:       ", show . agentView)
-          , ("NoGoods:    ", show . agentNoGoods)
-          ]
-        putStrLn $ show agId ++ ": =============================================="
-      next
-    interpretF (DumpString s next) = do
-      agId <- asks abtAgentId
-      liftIO . putStrLn $ "Agent " ++ show agId ++ ": " ++ s
-      next
+interpretF :: ABTF a -> ABT a
+interpretF (GetMsg next) = do
+  agId <- asks abtAgentId
+  liftIO . putStrLn $ "DEBUG: Agent " ++ show agId ++ " is waiting for a message"
+  chan <- asks $ agChan . (Map.! agId) . abtAgents
+  msg  <- liftIO . atomically $ readTChan chan
+  liftIO . putStrLn $ "DEBUG: Agent " ++ show agId ++ " reads a message"
+  return (next msg)
+interpretF (SendOk dst val next) = do
+  agId <- asks abtAgentId
+  chan <- asks $ agChan . (Map.! dst) . abtAgents
+  let msg = MsgOk agId val
+  liftIO . atomically $ writeTChan chan msg
+  liftIO . putStrLn $ "DEBUG: Agent " ++ show agId ++ " sent MsgOk"
+  return next
+interpretF (SendNoGood ngd next) = do
+  agId <- asks abtAgentId
+  let dst = fst . ngdRHS $ ngd
+  chan <- asks $ agChan . (Map.! dst) . abtAgents
+  let msg = MsgNoGood agId ngd
+  liftIO . atomically $ writeTChan chan msg
+  liftIO . putStrLn $ "DEBUG: Agent " ++ show agId ++ " sent MsgNoGood"
+  return next
+interpretF (SendStop next) = do
+  cs <- asks $ map agChan . Map.elems . abtAgents
+  forM_ cs $ \chan -> do
+    liftIO . atomically $ writeTChan chan MsgStop
+  return next
+interpretF (DumpState s next) = do
+  agId <- asks abtAgentId
+  liftIO $ do
+    putStrLn $ show agId ++ ": =============================================="
+    putStrLn $ show agId ++ ": Agent State Dump:"
+    mapM_ (\(str, f) -> putStrLn $ show agId ++ ": " ++ str ++ " " ++ f s) $
+      [ ("ID:         ", show . agentId)
+      , ("Value:      ", show . agentValue)
+      , ("Constrains: ", show . agentConstraints)
+      , ("Above:      ", show . agentAbove)
+      , ("Below:      ", show . agentBelow)
+      , ("View:       ", show . agentView)
+      , ("NoGoods:    ", show . agentNoGoods)
+      ]
+    putStrLn $ show agId ++ ": =============================================="
+  return next
+interpretF (DumpString s next) = do
+  agId <- asks abtAgentId
+  liftIO . putStrLn $ "Agent " ++ show agId ++ ": " ++ s
+  return next
 
 -- ----------------------------------------------------------------------
 
