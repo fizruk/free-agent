@@ -11,13 +11,12 @@
 -- Agents for free.
 ---------------------------------------------------------------------------
 module Control.Agent.Free (
-  module Control.Agent.Free.Interpret,
   Agent,
   Agent',
-  runAgent,
-  liftCmd,
+  execAgent, execAgent',
+  execAgent_, execAgent'_,
+  transform,
 ) where
 
-import Control.Agent.Free.Interpret
 import Control.Agent.Free.Internal
 
