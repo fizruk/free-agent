@@ -35,27 +35,27 @@ type Agent' f = Agent f IdentityT
 
 -- | @'transform' phi agent@ applies @phi@ to each low-level API command
 -- in @agent@ program. This is the basis for `behaviosites'.
-transform :: (MonadTrans t, Monad m, Functor f, Monad (t m), Monad (t Identity)) => (forall b. f b -> Agent f t b) -> Agent f t a -> Agent f t a
+transform :: (MonadTrans t, Monad m, Functor f, Monad (t m), Monad (t Identity)) => (f (Agent f t a) -> Agent f t a) -> Agent f t a -> Agent f t a
 transform = transformFreeT
 
 -- | Execute an agent program with particular interpreter.
 -- @'execAgent' int agent@ give an interpretation to the low-level API.
-execAgent :: (MFunctor t, MonadTrans t, Monad m, Functor f, Monad (t m), Monad (t Identity)) => (forall b. f b -> m b) -> Agent f t a -> t m a
-execAgent f = iterT (join . lift . f) . hoistFreeT (hoist $ return . runIdentity)
+execAgent :: (MFunctor t, MonadTrans t, Monad m, Functor f, Monad (t m), Monad (t Identity)) => (f (t m a) -> t m a) -> Agent f t a -> t m a
+execAgent f = iterT f . hoistFreeT (hoist $ return . runIdentity)
 
 -- | Like 'execAgent' for agents without exposed structure.
-execAgent' :: (Monad m, Functor f) => (forall b. f b -> m b) -> Agent' f a -> m a
-execAgent' f = runIdentityT . execAgent f
+execAgent' :: (Monad m, Functor f) => (f (m a) -> m a) -> Agent' f a -> m a
+execAgent' f = runIdentityT . execAgent (lift . f . fmap runIdentityT)
 
 -- | Like 'execAgent' but discards the result.
-execAgent_ :: (MFunctor t, MonadTrans t, Monad m, Functor f, Monad (t m), Monad (t Identity)) => (forall b. f b -> m b) -> Agent f t a -> t m ()
-execAgent_ f = (>> return ()) . execAgent f
+execAgent_ :: (MFunctor t, MonadTrans t, Monad m, Functor f, Monad (t m), Monad (t Identity)) => (f (t m a) -> t m a) -> Agent f t a -> t m ()
+execAgent_ f = liftM (const ()) . execAgent f
 
 -- | Like 'execAgent'' but discards the result.
-execAgent'_ :: (Monad m, Functor f) => (forall b. f b -> m b) -> Agent' f a -> m ()
-execAgent'_ f = (>> return ()) . execAgent'_ f
+execAgent'_ :: (Monad m, Functor f) => (f (m a) -> m a) -> Agent' f a -> m ()
+execAgent'_ f = liftM (const ()) . execAgent' f
 
 -- | This should be in @Control.Monad.Trans.Free@.
-transformFreeT :: (MonadTrans t, Monad m, Functor f, Monad (t m)) => (forall b. f b -> t m b) -> FreeT f m a -> t m a
-transformFreeT f = iterT (join . f) . hoistFreeT lift
+transformFreeT :: (MonadTrans t, Monad m, Functor f, Monad (t m)) => (f (t m a) -> t m a) -> FreeT f m a -> t m a
+transformFreeT f = iterT f . hoistFreeT lift
 
