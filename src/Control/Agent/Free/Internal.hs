@@ -35,7 +35,7 @@ type Agent' f = Agent f IdentityT
 
 -- | @'transform' phi agent@ applies @phi@ to each low-level API command
 -- in @agent@ program. This is the basis for `behaviosites'.
-transform :: (MonadTrans t, Monad m, Functor f, Monad (t m), Monad (t Identity)) => (f (Agent f t a) -> Agent f t a) -> Agent f t a -> Agent f t a
+transform :: (MonadTrans t, Functor f, Monad (t Identity)) => (f (Agent f t a) -> Agent f t a) -> Agent f t a -> Agent f t a
 transform = transformFreeT
 
 -- | Execute an agent program with particular interpreter.
