@@ -24,7 +24,6 @@ Library
   Build-Depends:        base >= 4 && < 5
                       , free >= 4.2
                       , transformers >= 0.3
-                      , mmorph >= 1.0.0
 
 Test-Suite spec
   Type:                 exitcode-stdio-1.0

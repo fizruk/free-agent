@@ -11,10 +11,8 @@
 -- Agents for free.
 ---------------------------------------------------------------------------
 module Control.Agent.Free (
-  Agent,
-  Agent',
-  execAgent, execAgent',
-  execAgent_, execAgent'_,
+  Agent, Agent',
+  execAgent, execAgent_,
   transform,
 ) where
 
