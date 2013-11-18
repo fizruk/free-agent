@@ -1,4 +1,6 @@
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE ConstraintKinds #-}
+{-# LANGUAGE KindSignatures #-}
 ---------------------------------------------------------------------------
 -- |
 -- Module      :  Control.Agent.Free.Internal
@@ -27,22 +29,25 @@ import Control.Monad.Trans.Identity
 -- for the possibility of `behaviosites' (see
 -- <http://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.114.4071> for
 -- more details).
-type Agent f t a = forall m. Monad m => FreeT f (t m) a
+type Agent f t (m :: * -> *) = FreeT f (t m)
 
 -- | An 'Agent' without any exposed structure.
-type Agent' f a = Agent f IdentityT a
+type Agent' f m = Agent f IdentityT m
+
+-- | A constraint synonym to make type signatures less scary.
+type FMT f m t = (Functor f, Monad m, MonadTrans t, Monad (t m))
 
 -- | @'transform' phi agent@ applies @phi@ to each low-level API command
 -- in @agent@ program. This is the basis for `behaviosites'.
-transform :: (Functor f, Monad m, MonadTrans t, Monad (t m)) => (f (t m a) -> t m a) -> FreeT f m a -> t m a
+transform :: (FMT f m t) => (f (t m a) -> t m a) -> FreeT f m a -> t m a
 transform f = iterT f . hoistFreeT lift
 
 -- | Execute an agent program with particular interpreter.
 -- @'execAgent' int agent@ give an interpretation to the low-level API.
-execAgent :: (Functor f, Monad m, MonadTrans t, Monad (t m)) => (forall b. f (m b) -> m b) -> FreeT f (t m) a -> t m a
+execAgent :: (FMT f m t) => (forall b. f (m b) -> m b) -> FreeT f (t m) a -> t m a
 execAgent f = iterT (join . lift . f . fmap return)
 
 -- | Like 'execAgent' but discards the result.
-execAgent_ :: (Functor f, Monad m, MonadTrans t, Monad (t m)) => (forall b. f (m b) -> m b) -> FreeT f (t m) a -> t m ()
+execAgent_ :: (FMT f m t) => (forall b. f (m b) -> m b) -> FreeT f (t m) a -> t m ()
 execAgent_ f = liftM (const ()) . execAgent f
 

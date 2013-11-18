@@ -11,9 +11,7 @@
 -- Agents for free.
 ---------------------------------------------------------------------------
 module Control.Agent.Free (
-  Agent, Agent',
-  execAgent, execAgent_,
-  transform,
+  module Control.Agent.Free.Internal
 ) where
 
 import Control.Agent.Free.Internal
