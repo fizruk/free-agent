@@ -2,9 +2,10 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE RankNTypes #-}
 module Main where
 
-import Control.Monad.Free
+import Control.Monad.Trans.Free
 import Control.Monad.State.Strict
 import Control.Monad.Reader
 
@@ -99,7 +100,7 @@ initAgentState = AgentState
   , agentId          = error "agent ID is not set"
   }
 
-type A = StateT AgentState (Agent' ABTF)
+type A a = forall m. Monad m => StateT AgentState (Agent' ABTF m) a
 
 data AgentProps = AgentProps
   { agChan  :: TChan AgentMsg
@@ -121,7 +122,7 @@ newtype ABT a = ABT { runABT :: ReaderT AbtState IO a } deriving (Functor, Monad
 data Constraint var = ConstraintNE var var deriving (Eq, Ord, Show)
 
 exec :: AgentState -> A a -> ABT a
-exec s = execAgent' (join . interpretF) . flip evalStateT s
+exec s m = execAgent' (join . interpretF) $ flip evalStateT s m
 
 execABT :: Map AgentId AgentProps -> ABT a -> IO a
 execABT agents = flip runReaderT initAbtState{abtAgents=agents} . runABT
