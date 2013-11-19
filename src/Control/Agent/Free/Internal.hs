@@ -44,10 +44,18 @@ transform f = iterT f . hoistFreeT lift
 
 -- | Execute an agent program with particular interpreter.
 -- @'execAgent' int agent@ give an interpretation to the low-level API.
-execAgent :: (FMT f m t) => (forall b. f (m b) -> m b) -> FreeT f (t m) a -> t m a
+execAgent :: (FMT f m t) => (forall b. f (m b) -> m b) -> Agent f t m a -> t m a
 execAgent f = iterT (join . lift . f . fmap return)
 
+-- | Like 'execAgent' for agents with no exposed structure.
+execAgent' :: (Functor f, Monad m) => (forall b. f (m b) -> m b) -> Agent' f m a -> m a
+execAgent' f = runIdentityT . execAgent f
+
 -- | Like 'execAgent' but discards the result.
-execAgent_ :: (FMT f m t) => (forall b. f (m b) -> m b) -> FreeT f (t m) a -> t m ()
+execAgent_ :: (FMT f m t) => (forall b. f (m b) -> m b) -> Agent f t m a -> t m ()
 execAgent_ f = liftM (const ()) . execAgent f
+
+-- | Like 'execAgent'' but discards the result.
+execAgent'_ :: (Functor f, Monad m) => (forall b. f (m b) -> m b) -> Agent' f m a -> m ()
+execAgent'_ f = runIdentityT . execAgent_ f
 
