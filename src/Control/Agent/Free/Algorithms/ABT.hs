@@ -86,3 +86,17 @@ msgLoop = do
       MsgStop -> do
         agStop .= False
     msgLoop
+
+-- | Resolve conflict by
+resolveConflict :: (Ord i, Eq v) => i -> NoGood i v -> A i v ()
+resolveConflict sender ngd = do
+  view <- use agView
+  if coherent (ngdLHS ngd) view then do
+    agNoGoods %= (ngd:)
+    agValue .= Nothing
+    checkAgentView
+  else do
+    val <- use agValue
+    let val' = Just . snd . ngdRHS $ ngd
+    when (val == val') $ do
+      sendOk sender val
