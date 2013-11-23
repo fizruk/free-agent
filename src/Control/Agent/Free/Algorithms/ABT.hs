@@ -157,3 +157,17 @@ chooseValue = do
       case f x of
         Just y  -> first (y:) (choose xs)
         Nothing -> ([], Just x)
+
+-- | Eliminate values taken by nogoods.
+eliminateNoGoods :: Eq v => [v] -> A i v [v]
+eliminateNoGoods xs = do
+  ys <- uses agNoGoods $ map (snd . ngdRHS)
+  return $ xs \\ nub ys
+
+-- | Check value for consistency with current view and constraints.
+-- Returns the list of constraints that would be broken by choosing the value.
+consistent :: Maybe v -> A i v Bool
+consistent Nothing  = return (False, [])
+consistent (Just x) = do
+  view <- use agView
+  uses agConstraints $ all . isNothing . (\c -> checkConstraint c view x)
