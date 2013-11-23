@@ -12,7 +12,7 @@ import Control.Monad.Reader
 import Control.Monad.Trans.Identity
 
 import Control.Agent.Free
-import Control.Agent.Free.Algorithms.ABT (Message(..), ABTKernelF(..), AgentState(..), A, NoGood(..), Constraint(..))
+import Control.Agent.Free.Algorithms.ABT (Message(..), ABTKernelF(..), AgentState(..), A, NoGood(..), Constraint(..), abtKernel)
 import qualified Control.Agent.Free.Algorithms.ABT as ABT
 
 import Control.Concurrent.STM
@@ -93,7 +93,7 @@ mkAgents :: [ConstraintNE AgentId] -> Map AgentId (AgentState AgentId AgentValue
 mkAgents cs = Map.mapWithKey mkState . Map.fromListWith (++) $ map leftC cs ++ map rightC cs
   where
     leftC (ConstraintNE x y) = (x, [(y, Constraint $ \view v -> do
-        let v' = view Map.! y
+        v' <- Map.lookup y view
         guard (v' /= v)
         return (NoGood (Map.singleton y v') (x, v))
       )] )
@@ -107,8 +107,29 @@ mkAgents cs = Map.mapWithKey mkState . Map.fromListWith (++) $ map leftC cs ++ m
       , _agDomain       = [minBound..maxBound]
       }
 
-solve :: [ConstraintNE AgentId] -> IO (Map AgentId AgentValue)
-solve = undefined
+solve :: [ConstraintNE AgentId] -> IO (Map AgentId (Maybe AgentValue))
+solve cs = do
+  let agents = Map.toList $ mkAgents cs
+      ids    = map fst agents
+  xs <- forM agents $ \(agId, agState) -> do
+    chan <- atomically $ newTChan
+    let props    = AgentProps chan
+    return (agId, props, agState)
+  let ps  = Map.fromList $ map (\(x, y, _) -> (x, y)) xs
+      ags = map (\(x, _, z) -> (x, z)) xs
+  execABT ps $ do
+    waitAll <- forM ags $ \(agId, agState) -> do
+      waitRes <- forkExec $ do
+        liftIO . putStrLn $ "new agent started!"
+        local (setAgentId agId) $ do
+          exec agState abtKernel
+      return (agId, waitRes)
+    res <- forM waitAll $ \(agId, waitRes) -> do
+      x <- waitRes
+      return (agId, x)
+    return $ Map.fromList res
+  where
+    setAgentId agId s = s{abtAgentId = agId}
 
 main :: IO ()
 main = do
