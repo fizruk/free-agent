@@ -1,4 +1,3 @@
-{-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE DeriveFunctor #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE RankNTypes #-}
@@ -18,7 +17,6 @@ module Control.Agent.Free.Algorithms.ABT where
 
 import Control.Arrow
 import Control.Agent.Free
-import Control.Lens hiding (view)
 import Control.Monad
 import Control.Monad.Trans.Free
 import Control.Monad.State
@@ -69,42 +67,44 @@ newtype Constraint i v = Constraint
   { constraintCheck  :: AgentView i v -> v -> Maybe (NoGood i v) }
 
 data AgentState i v = AgentState
-  { _agStop        :: Bool
-  , _agValue       :: Maybe v
-  , _agDomain      :: [v]
-  , _agId          :: i
-  , _agView        :: Map i v
-  , _agAbove       :: [i]
-  , _agBelow       :: [i]
-  , _agConstraints :: [Constraint i v]
-  , _agNoGoods     :: [NoGood i v]
+  { agStop        :: Bool
+  , agValue       :: Maybe v
+  , agDomain      :: [v]
+  , agId          :: i
+  , agView        :: Map i v
+  , agAbove       :: [i]
+  , agBelow       :: [i]
+  , agConstraints :: [Constraint i v]
+  , agNoGoods     :: [NoGood i v]
   }
-makeLenses ''AgentState
 
 initialAgentState :: AgentState i v
 initialAgentState = AgentState
-  { _agStop        = False
-  , _agValue       = Nothing
-  , _agDomain      = []
-  , _agId          = undefined
-  , _agView        = Map.empty
-  , _agAbove       = []
-  , _agBelow       = []
-  , _agConstraints = []
-  , _agNoGoods     = []
+  { agStop        = False
+  , agValue       = Nothing
+  , agDomain      = []
+  , agId          = undefined
+  , agView        = Map.empty
+  , agAbove       = []
+  , agBelow       = []
+  , agConstraints = []
+  , agNoGoods     = []
   }
 
 type A i v a = forall m. Monad m => StateT (AgentState i v) (Agent' (ABTKernelF i v) m) a
+
+updateNoGoods :: MonadState (AgentState i v) m => ([NoGood i v] -> [NoGood i v]) -> m ()
+updateNoGoods f = modify (\s@AgentState{agNoGoods=ngds} -> s{ agNoGoods = f ngds })
 
 abtKernel :: (Ord i, Eq v) => A i v (Maybe v)
 abtKernel = do
   checkAgentView
   msgLoop
-  use agValue
+  gets agValue
 
 msgLoop :: (Ord i, Eq v) => A i v ()
 msgLoop = do
-  stop <- use agStop
+  stop <- gets agStop
   unless stop $ do
     msg <- recv
     case msg of
@@ -114,19 +114,19 @@ msgLoop = do
       MsgNoGood src ngd -> do
         resolveConflict src ngd
       MsgStop -> do
-        agStop .= False
+        modify (\s -> s{ agStop = False })
     msgLoop
 
 -- | Resolve conflict by
 resolveConflict :: (Ord i, Eq v) => i -> NoGood i v -> A i v ()
 resolveConflict sender ngd = do
-  view <- use agView
+  view <- gets agView
   if coherent (ngdLHS ngd) view then do
-    agNoGoods %= (ngd:)
-    agValue .= Nothing
+    updateNoGoods (ngd:)
+    modify (\s -> s{ agValue = Nothing })
     checkAgentView
   else do
-    val <- use agValue
+    val <- gets agValue
     let val' = snd . ngdRHS $ ngd
     when (val == Just val') $ do
       sendOk sender val'
@@ -135,15 +135,15 @@ resolveConflict sender ngd = do
 -- The solution does not exist.
 stopAgent :: A i v ()
 stopAgent = do
-  agStop .= False
+  modify (\s -> s{ agStop = False })
   sendStop
 
 -- | Update agent's view.
 agentUpdate :: (Ord i, Eq v) => i -> Maybe v -> A i v ()
 agentUpdate src val = do
-  agView.at src .= val
-  view <- use agView
-  agNoGoods %= filter (coherent view . ngdLHS)
+  modify (\s@AgentState{agView=view} -> s{ agView = Map.update (const val) src view })
+  view <- gets agView
+  updateNoGoods $ filter (coherent view . ngdLHS)
 
 -- | Check whether NoGood is coherent with agent's view (i.e. whether
 -- nogood's LHS does not contain old information about values).
@@ -154,17 +154,17 @@ coherent ma mb = F.and $ Map.intersectionWith (==) ma mb
 -- If not - try rechoose value.
 checkAgentView :: (Ord i, Eq v) => A i v ()
 checkAgentView = do
-  c <- use agValue >>= consistent
+  c <- gets agValue >>= consistent
   unless c $ do
     val <- chooseValue
-    agValue .= val
+    modify (\s -> s{ agValue = val })
     case val of
       -- unable to choose a value
       Nothing -> do
         backtrack
       -- value chosen
       Just x  -> do
-        ids <- use agAbove
+        ids <- gets agAbove
         mapM_ (flip sendOk x) ids
 
 -- | Try to choose a value w.r.t. nogood store, constraints
@@ -172,12 +172,12 @@ checkAgentView = do
 chooseValue :: Eq v => A i v (Maybe v)
 chooseValue = do
   -- eliminate values by nogood store
-  xs   <- use agDomain >>= eliminateNoGoods -- FIXME: too strict
+  xs   <- gets agDomain >>= eliminateNoGoods -- FIXME: too strict
   -- check the rest for consistency with constraints
-  view <- use agView
-  cs   <- uses agConstraints $ map (flip constraintCheck view)
+  view <- gets agView
+  cs   <- gets $ map (flip constraintCheck view) . agConstraints
   let (ngds, v) = choose (msum . zipWith ($) cs . repeat) xs
-  agNoGoods %= (ngds ++)
+  updateNoGoods (ngds ++)
   return v
   where
     choose _ [] = ([], Nothing)
@@ -189,7 +189,7 @@ chooseValue = do
 -- | Eliminate values taken by nogoods.
 eliminateNoGoods :: Eq v => [v] -> A i v [v]
 eliminateNoGoods xs = do
-  ys <- uses agNoGoods $ map (snd . ngdRHS)
+  ys <- gets $ map (snd . ngdRHS) . agNoGoods
   return $ xs \\ nub ys
 
 -- | Check value for consistency with current view and constraints.
@@ -197,8 +197,8 @@ eliminateNoGoods xs = do
 consistent :: Maybe v -> A i v Bool
 consistent Nothing  = return False
 consistent (Just x) = do
-  view <- use agView
-  uses agConstraints $ all isNothing . map (\c -> constraintCheck c view x)
+  view <- gets agView
+  gets $ all isNothing . map (\c -> constraintCheck c view x) . agConstraints
 
 -- | Bactrack.
 -- Resolves nogood store, if succeeded sends new nogood (in BACKTRACK
@@ -206,11 +206,11 @@ consistent (Just x) = do
 -- Otherwise sends STOP.
 backtrack :: (Ord i, Eq v) => A i v ()
 backtrack = do
-  ngd <- uses agNoGoods resolveNoGoods
+  ngd <- gets $ resolveNoGoods . agNoGoods
   case ngd of
     Nothing -> stopAgent -- no solution exists
     Just ng@NoGood{ngdRHS=(xj,_)} -> do
-      agNoGoods %= filter (not . Map.member xj . ngdLHS)
+      updateNoGoods $ filter (not . Map.member xj . ngdLHS)
       sendBacktrack xj ng
       agentUpdate xj Nothing
       checkAgentView
