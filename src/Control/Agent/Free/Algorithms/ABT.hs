@@ -119,3 +119,22 @@ agentUpdate src val = do
 -- nogood's LHS does not contain old information about values).
 coherent :: (Ord a, Eq b) => Map a b -> Map a b -> Bool
 coherent ma mb = F.and $ Map.intersectionWith (==) ma mb
+
+-- | Recheck whether current view is consistent with agent's value.
+-- If not - try rechoose value.
+checkAgentView :: A i v ()
+checkAgentView = do
+  val  <- gets agentValue
+  view <- gets agentView
+  c    <- consistent val view
+  unless c $ do
+    val <- chooseValue
+    agValue .= val
+    case val of
+      -- unable to choose a value
+      Nothing -> do
+        backtrack
+      -- value chosen
+      Just x  -> do
+        ids <- use agAbove
+        mapM_ (flip sendOk x) ids
