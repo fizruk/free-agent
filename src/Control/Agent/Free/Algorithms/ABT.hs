@@ -11,7 +11,7 @@
 -- Stability   :  experimental
 -- Portability :  ghc
 --
--- Family of ABT algorithms. Based on "The Asynchronous Backtracking Family"
+-- Family of ABT algorithms. Based on «The Asynchronous Backtracking Family» 
 -- <http://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.60.4716>.
 ---------------------------------------------------------------------------
 module Control.Agent.Free.Algorithms.ABT (
