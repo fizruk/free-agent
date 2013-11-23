@@ -72,6 +72,19 @@ data AgentState i v = AgentState
   }
 makeLenses ''AgentState
 
+initialAgentState :: AgentState i v
+initialAgentState = AgentState
+  { _agStop        = False
+  , _agValue       = Nothing
+  , _agDomain      = []
+  , _agId          = undefined
+  , _agView        = Map.empty
+  , _agAbove       = []
+  , _agBelow       = []
+  , _agConstraints = []
+  , _agNoGoods     = []
+  }
+
 type A i v a = forall m. Monad m => StateT (AgentState i v) (Agent' (ABTKernelF i v) m) a
 
 prg :: (Ord i, Eq v) => A i v (Maybe v)
