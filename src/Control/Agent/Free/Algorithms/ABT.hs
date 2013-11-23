@@ -63,3 +63,26 @@ data AgentState i v = AgentState
   , _agNoGoods     :: [NoGood i v]
   }
 makeLenses ''AgentState
+
+type A i v a = forall m. Monad m => StateT (AgentState i v) (Agent' (ABTKernelF i v) m) a
+
+prg :: (Ord i, Eq v) => A i v (Maybe v)
+prg = do
+  checkAgentView
+  msgLoop
+  use agValue
+
+msgLoop :: (Ord i, Eq v) => A i v ()
+msgLoop = do
+  stop <- use agStop
+  unless (stop <= 0) $ do
+    msg <- recv
+    case msg of
+      MsgOk src val -> do
+        agentUpdate src (Just val)
+        checkAgentView
+      MsgNoGood src ngd -> do
+        resolveConflict src ngd
+      MsgStop -> do
+        agStop .= False
+    msgLoop
