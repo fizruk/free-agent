@@ -1,6 +1,7 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE DeriveFunctor #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE RankNTypes #-}
 ---------------------------------------------------------------------------
 -- |
 -- Module      :  Control.Agent.Free.Algorithms.ABT
@@ -17,11 +18,18 @@ module Control.Agent.Free.Algorithms.ABT where
 
 import Control.Arrow
 import Control.Agent.Free
-import Control.Lens
+import Control.Applicative
+import Control.Lens hiding (view)
+import Control.Monad
 import Control.Monad.Trans.Free
 import Control.Monad.Free.TH
+import Control.Monad.State
 
 import qualified Data.Foldable as F
+
+import Data.List
+import Data.Maybe
+import qualified Data.Set as Set
 
 import Data.Map (Map)
 import qualified Data.Map as Map
@@ -75,7 +83,7 @@ prg = do
 msgLoop :: (Ord i, Eq v) => A i v ()
 msgLoop = do
   stop <- use agStop
-  unless (stop <= 0) $ do
+  unless stop $ do
     msg <- recv
     case msg of
       MsgOk src val -> do
@@ -97,9 +105,9 @@ resolveConflict sender ngd = do
     checkAgentView
   else do
     val <- use agValue
-    let val' = Just . snd . ngdRHS $ ngd
-    when (val == val') $ do
-      sendOk sender val
+    let val' = snd . ngdRHS $ ngd
+    when (val == Just val') $ do
+      sendOk sender val'
 
 -- | Stop and send STOP message.
 -- The solution does not exist.
@@ -109,7 +117,7 @@ stopAgent = do
   sendStop
 
 -- | Update agent's view.
-agentUpdate :: i -> Maybe v -> A i v ()
+agentUpdate :: (Ord i, Eq v) => i -> Maybe v -> A i v ()
 agentUpdate src val = do
   agView.at src .= val
   view <- use agView
@@ -122,11 +130,9 @@ coherent ma mb = F.and $ Map.intersectionWith (==) ma mb
 
 -- | Recheck whether current view is consistent with agent's value.
 -- If not - try rechoose value.
-checkAgentView :: A i v ()
+checkAgentView :: (Ord i, Eq v) => A i v ()
 checkAgentView = do
-  val  <- gets agentValue
-  view <- gets agentView
-  c    <- consistent val view
+  c <- use agValue >>= consistent
   unless c $ do
     val <- chooseValue
     agValue .= val
@@ -141,7 +147,7 @@ checkAgentView = do
 
 -- | Try to choose a value w.r.t. nogood store, constraints
 -- and current view.
-chooseValue :: A i v (Maybe v)
+chooseValue :: Eq v => A i v (Maybe v)
 chooseValue = do
   -- eliminate values by nogood store
   xs   <- use agDomain >>= eliminateNoGoods -- FIXME: too strict
@@ -155,7 +161,7 @@ chooseValue = do
     choose _ [] = ([], Nothing)
     choose f (x:xs) =
       case f x of
-        Just y  -> first (y:) (choose xs)
+        Just y  -> first (y:) (choose f xs)
         Nothing -> ([], Just x)
 
 -- | Eliminate values taken by nogoods.
@@ -167,16 +173,16 @@ eliminateNoGoods xs = do
 -- | Check value for consistency with current view and constraints.
 -- Returns the list of constraints that would be broken by choosing the value.
 consistent :: Maybe v -> A i v Bool
-consistent Nothing  = return (False, [])
+consistent Nothing  = return False
 consistent (Just x) = do
   view <- use agView
-  uses agConstraints $ all . isNothing . (\c -> checkConstraint c view x)
+  uses agConstraints $ all isNothing . map (\c -> constraintCheck c view x)
 
 -- | Bactrack.
 -- Resolves nogood store, if succeeded sends new nogood (in BACKTRACK
 -- message) to the agent with larger index among involved in conflict.
 -- Otherwise sends STOP.
-backtrack :: A i v ()
+backtrack :: (Ord i, Eq v) => A i v ()
 backtrack = do
   ngd <- uses agNoGoods resolveNoGoods
   case ngd of
@@ -189,7 +195,7 @@ backtrack = do
 
 -- | Resolve nogood store.
 -- Nothing means it cannot be resolved any further.
-resolveNoGoods :: [NoGood i v] -> Maybe (NoGood i v)
+resolveNoGoods :: Ord i => [NoGood i v] -> Maybe (NoGood i v)
 resolveNoGoods ngds = do
   let keys = map (Set.fromList . Map.keys . ngdLHS) ngds
       xs   = Set.unions keys
