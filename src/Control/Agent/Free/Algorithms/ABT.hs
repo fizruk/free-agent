@@ -138,3 +138,22 @@ checkAgentView = do
       Just x  -> do
         ids <- use agAbove
         mapM_ (flip sendOk x) ids
+
+-- | Try to choose a value w.r.t. nogood store, constraints
+-- and current view.
+chooseValue :: A i v (Maybe v)
+chooseValue = do
+  -- eliminate values by nogood store
+  xs   <- use agDomain >>= eliminateNoGoods -- FIXME: too strict
+  -- check the rest for consistency with constraints
+  view <- use agView
+  cs   <- uses agConstraints $ map (flip constraintCheck view)
+  let (ngds, v) = choose (msum . zipWith ($) cs . repeat) xs
+  agNoGoods %= (ngds ++)
+  return v
+  where
+    choose _ [] = ([], Nothing)
+    choose f (x:xs) =
+      case f x of
+        Just y  -> first (y:) (choose xs)
+        Nothing -> ([], Just x)
