@@ -100,3 +100,22 @@ resolveConflict sender ngd = do
     let val' = Just . snd . ngdRHS $ ngd
     when (val == val') $ do
       sendOk sender val
+
+-- | Stop and send STOP message.
+-- The solution does not exist.
+stopAgent :: A i v ()
+stopAgent = do
+  agStop .= False
+  sendStop
+
+-- | Update agent's view.
+agentUpdate :: i -> Maybe v -> A i v ()
+agentUpdate src val = do
+  agView.at src .= val
+  view <- use agView
+  agNoGoods %= filter (coherent view . ngdLHS)
+
+-- | Check whether NoGood is coherent with agent's view (i.e. whether
+-- nogood's LHS does not contain old information about values).
+coherent :: (Ord a, Eq b) => Map a b -> Map a b -> Bool
+coherent ma mb = F.and $ Map.intersectionWith (==) ma mb
