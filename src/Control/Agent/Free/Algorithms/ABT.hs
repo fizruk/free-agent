@@ -171,3 +171,34 @@ consistent Nothing  = return (False, [])
 consistent (Just x) = do
   view <- use agView
   uses agConstraints $ all . isNothing . (\c -> checkConstraint c view x)
+
+-- | Bactrack.
+-- Resolves nogood store, if succeeded sends new nogood (in BACKTRACK
+-- message) to the agent with larger index among involved in conflict.
+-- Otherwise sends STOP.
+backtrack :: A i v ()
+backtrack = do
+  ngd <- uses agNoGoods resolveNoGoods
+  case ngd of
+    Nothing -> stopAgent -- no solution exists
+    Just ng@NoGood{ngdRHS=(xj,_)} -> do
+      agNoGoods %= filter (not . Map.member xj . ngdLHS)
+      sendBacktrack xj ng
+      agentUpdate xj Nothing
+      checkAgentView
+
+-- | Resolve nogood store.
+-- Nothing means it cannot be resolved any further.
+resolveNoGoods :: [NoGood i v] -> Maybe (NoGood i v)
+resolveNoGoods ngds = do
+  let keys = map (Set.fromList . Map.keys . ngdLHS) ngds
+      xs   = Set.unions keys
+  if Set.null xs then
+    Nothing
+  else do
+    let xj   = Set.findMax xs
+        lhs  = Map.unions $ map ngdLHS ngds
+        lhs' = Map.delete xj lhs
+        rhs  = lhs Map.! xj
+    return $ NoGood lhs' (xj, rhs)
+
