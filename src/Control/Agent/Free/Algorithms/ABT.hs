@@ -18,7 +18,6 @@ module Control.Agent.Free.Algorithms.ABT where
 
 import Control.Arrow
 import Control.Agent.Free
-import Control.Applicative
 import Control.Lens hiding (view)
 import Control.Monad
 import Control.Monad.Trans.Free
@@ -87,8 +86,8 @@ initialAgentState = AgentState
 
 type A i v a = forall m. Monad m => StateT (AgentState i v) (Agent' (ABTKernelF i v) m) a
 
-prg :: (Ord i, Eq v) => A i v (Maybe v)
-prg = do
+abtKernel :: (Ord i, Eq v) => A i v (Maybe v)
+abtKernel = do
   checkAgentView
   msgLoop
   use agValue
