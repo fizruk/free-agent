@@ -21,7 +21,6 @@ import Control.Agent.Free
 import Control.Lens hiding (view)
 import Control.Monad
 import Control.Monad.Trans.Free
-import Control.Monad.Free.TH
 import Control.Monad.State
 
 import qualified Data.Foldable as F
@@ -51,7 +50,18 @@ data ABTKernelF i v next
   | SendStop next
   | Recv (Message i v -> next)
   deriving (Functor)
-makeFree ''ABTKernelF
+
+sendOk :: MonadFree (ABTKernelF i v) m => i -> v -> m ()
+sendOk i v = liftF $ SendOk i v ()
+
+sendBacktrack :: MonadFree (ABTKernelF i v) m => i -> (NoGood i v) -> m ()
+sendBacktrack i ngd = liftF $ SendBacktrack i ngd ()
+
+sendStop :: MonadFree (ABTKernelF i v) m => m ()
+sendStop = liftF $ SendStop ()
+
+recv :: MonadFree (ABTKernelF i v) m => m (Message i v)
+recv = liftF $ Recv id
 
 type AgentView i v = Map i v
 
