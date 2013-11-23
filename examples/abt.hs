@@ -12,7 +12,7 @@ import Control.Monad.Reader
 import Control.Monad.Trans.Identity
 
 import Control.Agent.Free
-import Control.Agent.Free.Algorithms.ABT (Message(..), ABTKernelF(..), AgentState(..), A, NoGood(..))
+import Control.Agent.Free.Algorithms.ABT (Message(..), ABTKernelF(..), AgentState(..), A, NoGood(..), Constraint(..))
 import qualified Control.Agent.Free.Algorithms.ABT as ABT
 
 import Control.Concurrent.STM
@@ -88,6 +88,24 @@ interpretF (SendStop next) = do
   return next
 
 -- ----------------------------------------------------------------------
+
+mkAgents :: [ConstraintNE AgentId] -> Map AgentId (AgentState AgentId AgentValue)
+mkAgents cs = Map.mapWithKey mkState . Map.fromListWith (++) $ map leftC cs ++ map rightC cs
+  where
+    leftC (ConstraintNE x y) = (x, [(y, Constraint $ \view v -> do
+        let v' = view Map.! y
+        guard (v' /= v)
+        return (NoGood (Map.singleton y v') (x, v))
+      )] )
+    rightC (ConstraintNE x y) = leftC (ConstraintNE y x)
+
+    mkState k cs = ABT.initialAgentState
+      { _agConstraints  = map snd cs
+      , _agAbove        = filter (> k) $ map fst cs
+      , _agBelow        = filter (< k) $ map fst cs
+      , _agId           = k
+      , _agDomain       = [minBound..maxBound]
+      }
 
 solve :: [ConstraintNE AgentId] -> IO (Map AgentId AgentValue)
 solve = undefined
