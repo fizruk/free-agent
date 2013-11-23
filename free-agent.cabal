@@ -26,6 +26,7 @@ Library
                       , free >= 4.2
                       , transformers >= 0.3
                       , containers >= 0.5
+                      , lens >= 3.8
 
 Test-Suite spec
   Type:                 exitcode-stdio-1.0
