@@ -100,11 +100,11 @@ mkAgents cs = Map.mapWithKey mkState . Map.fromListWith (++) $ map leftC cs ++ m
     rightC (ConstraintNE x y) = leftC (ConstraintNE y x)
 
     mkState k cs = ABT.initialAgentState
-      { _agConstraints  = map snd cs
-      , _agAbove        = filter (> k) $ map fst cs
-      , _agBelow        = filter (< k) $ map fst cs
-      , _agId           = k
-      , _agDomain       = [minBound..maxBound]
+      { agConstraints  = map snd cs
+      , agAbove        = filter (> k) $ map fst cs
+      , agBelow        = filter (< k) $ map fst cs
+      , agId           = k
+      , agDomain       = [minBound..maxBound]
       }
 
 solve :: [ConstraintNE AgentId] -> IO (Map AgentId (Maybe AgentValue))
