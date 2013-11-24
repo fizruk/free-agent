@@ -54,7 +54,7 @@ data Message i v
   = -- | OK? message is sent to higher agents so they could check it.
     MsgOk v
     -- | BACKTRACK message is sent to lower agent to force it rechoose its value.
-  | MsgNoGood (NoGood i v)
+  | MsgBacktrack (NoGood i v)
     -- | STOP message is sent when it is know that a problem has no solution.
   | MsgStop
   deriving (Show)
@@ -77,7 +77,7 @@ sendOk i v = send i (MsgOk v)
 
 -- | Send BACKTRACK message. Requires address of another agent and resolved nogood store.
 sendBacktrack :: MonadFree (ABTKernelF i v) m => i -> (NoGood i v) -> m ()
-sendBacktrack i ngd = send i (MsgNoGood ngd)
+sendBacktrack i ngd = send i (MsgBacktrack ngd)
 
 -- | Send STOP message to the *system*. All agents in the system will receive this message.
 sendStop :: MonadFree (ABTKernelF i v) m => i -> m ()
@@ -142,7 +142,7 @@ msgLoop = do
       MsgOk val -> do
         agentUpdate src (Just val)
         checkAgentView
-      MsgNoGood ngd -> do
+      MsgBacktrack ngd -> do
         resolveConflict src ngd
       MsgStop -> do
         modify (\s -> s{ agStop = False })
