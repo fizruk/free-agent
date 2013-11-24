@@ -12,7 +12,7 @@ import Control.Monad.Reader
 import Control.Monad.Trans.Identity
 
 import Control.Agent.Free
-import Control.Agent.Free.Algorithms.ABT (Message(..), ABTKernelF(..), AgentState(..), A, NoGood(..), Constraint(..), abtKernel)
+import Control.Agent.Free.Algorithms.ABT (Message(..), ABTKernelF, AgentState(..), A, NoGood(..), Constraint(..), abtKernel, SendRecv(..))
 import qualified Control.Agent.Free.Algorithms.ABT as ABT
 
 import Control.Concurrent.STM
