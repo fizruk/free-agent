@@ -22,6 +22,7 @@ Library
   Exposed-Modules:      Control.Agent.Free
                         Control.Agent.Free.Internal
                         Control.Agent.Free.Algorithms.ABT
+                        Control.Agent.Free.Interfaces.SendRecv
   Build-Depends:        base >= 4 && < 5
                       , free >= 4.2
                       , transformers >= 0.3
