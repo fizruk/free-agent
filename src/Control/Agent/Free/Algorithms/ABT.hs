@@ -25,6 +25,7 @@ module Control.Agent.Free.Algorithms.ABT (
   , sendStop
   , recv
   -- * Used data structures
+  , Constraint(..)
   , Message(..)
   , NoGood(..)
   , AgentState(..)
@@ -67,31 +68,30 @@ data NoGood i v = NoGood
 
 -- | Abstract interface used by ABT Kernel algorithm.
 data ABTKernelF i v next
-  = -- | Send OK? message. See also 'sendOk'.
-    SendOk i v next
-    -- | Send BACKTRACK message. See also 'sendBacktrack'.
-  | SendBacktrack i (NoGood i v) next
-    -- | Send STOP to the *system*. See also 'sendStop'.
-  | SendStop next
+  = -- | Send OK? message. See also 'send', 'sendOk', 'sendBacktrack' and 'sendStop'.
+    Send (Message i v) next
     -- | Receive a message. See also 'recv'.
   | Recv (Message i v -> next)
   deriving (Functor)
 
--- | Send OK? message. Requires address of another agent and a chosen value.
-sendOk :: MonadFree (ABTKernelF i v) m => i -> v -> m ()
-sendOk i v = liftF $ SendOk i v ()
-
--- | Send BACKTRACK message. Requires address of another agent and resolved nogood store.
-sendBacktrack :: MonadFree (ABTKernelF i v) m => i -> (NoGood i v) -> m ()
-sendBacktrack i ngd = liftF $ SendBacktrack i ngd ()
-
--- | Send STOP message to the *system*. All agents in the system will receive this message.
-sendStop :: MonadFree (ABTKernelF i v) m => m ()
-sendStop = liftF $ SendStop ()
+send :: MonadFree (ABTKernelF i v) m => Message i v -> m ()
+send msg = liftF $ Send msg ()
 
 -- | Receive message.
 recv :: MonadFree (ABTKernelF i v) m => m (Message i v)
 recv = liftF $ Recv id
+
+-- | Send OK? message. Requires address of another agent and a chosen value.
+sendOk :: MonadFree (ABTKernelF i v) m => i -> v -> m ()
+sendOk i v = send (MsgOk i v)
+
+-- | Send BACKTRACK message. Requires address of another agent and resolved nogood store.
+sendBacktrack :: MonadFree (ABTKernelF i v) m => i -> (NoGood i v) -> m ()
+sendBacktrack i ngd = send (MsgNoGood i ngd)
+
+-- | Send STOP message to the *system*. All agents in the system will receive this message.
+sendStop :: MonadFree (ABTKernelF i v) m => m ()
+sendStop = send MsgStop
 
 -- | Agent view is just a 'Map' from agents' adresses to agents' values.
 type AgentView i v = Map i v
