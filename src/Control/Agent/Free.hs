@@ -13,7 +13,7 @@
 --
 -- Internals of the free agent.
 ---------------------------------------------------------------------------
-module Control.Agent.Free.Internal where
+module Control.Agent.Free where
 
 import Control.Monad
 import Control.Monad.Trans.Free
