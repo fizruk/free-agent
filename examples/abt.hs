@@ -35,7 +35,7 @@ type SenderId = AgentId
 type AgentValue = Color
 
 data AgentProps = AgentProps
-  { agChan  :: TChan (Message AgentId AgentValue)
+  { agChan  :: TChan (AgentId, Message AgentId AgentValue)
   }
 
 data AbtState = AbtState
@@ -66,25 +66,26 @@ interpretF (Recv next) = do
   chan <- asks $ agChan . (Map.! agId) . abtAgents
   msg  <- liftIO . atomically $ readTChan chan
   liftIO . putStrLn $ "DEBUG: Agent " ++ show agId ++ " reads a message"
-  return (next msg)
-interpretF (Send (MsgOk dst val) next) = do
+  return (uncurry next msg)
+interpretF (Send dst (MsgOk val) next) = do
   agId <- asks abtAgentId
   chan <- asks $ agChan . (Map.! dst) . abtAgents
-  let msg = MsgOk agId val
+  let msg = (agId, MsgOk val)
   liftIO . atomically $ writeTChan chan msg
   liftIO . putStrLn $ "DEBUG: Agent " ++ show agId ++ " sent MsgOk"
   return next
-interpretF (Send (MsgNoGood dst ngd) next) = do
+interpretF (Send dst (MsgNoGood ngd) next) = do
   agId <- asks abtAgentId
   chan <- asks $ agChan . (Map.! dst) . abtAgents
-  let msg = MsgNoGood agId ngd
+  let msg = (agId, MsgNoGood ngd)
   liftIO . atomically $ writeTChan chan msg
   liftIO . putStrLn $ "DEBUG: Agent " ++ show agId ++ " sent MsgNoGood"
   return next
-interpretF (Send MsgStop next) = do
+interpretF (Send _ MsgStop next) = do
+  agId <- asks abtAgentId
   cs <- asks $ map agChan . Map.elems . abtAgents
   forM_ cs $ \chan -> do
-    liftIO . atomically $ writeTChan chan MsgStop
+    liftIO . atomically $ writeTChan chan (agId, MsgStop)
   return next
 
 -- ----------------------------------------------------------------------
