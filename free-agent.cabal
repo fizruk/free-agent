@@ -21,7 +21,11 @@ Library
   GHC-Options:          -Wall
   Exposed-Modules:      Control.Agent.Free
                         Control.Agent.Free.Internal
+                        -- Algorithms
                         Control.Agent.Free.Algorithms.ABT
+                        -- Environments
+                        Control.Agent.Free.Environments.STM
+                        -- Interfaces
                         Control.Agent.Free.Interfaces
                         Control.Agent.Free.Interfaces.SendRecv
   Build-Depends:        base >= 4 && < 5
@@ -29,6 +33,7 @@ Library
                       , transformers >= 0.3
                       , mtl >= 2.1
                       , containers >= 0.5
+                      , stm >= 2.4
 
 Test-Suite spec
   Type:                 exitcode-stdio-1.0
