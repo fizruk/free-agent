@@ -28,6 +28,7 @@ module Control.Agent.Free.Algorithms.ABT (
   , Constraint(..)
   , Message(..)
   , NoGood(..)
+  , AgentView
   , AgentState(..)
   , initialAgentState
 ) where
