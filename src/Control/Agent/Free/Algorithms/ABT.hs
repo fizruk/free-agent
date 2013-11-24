@@ -52,9 +52,9 @@ import qualified Data.Map as Map
 -- | ABT Kernel messages.
 data Message i v
   = -- | OK? message is sent to higher agents so they could check it.
-    MsgOk i v
+    MsgOk v
     -- | BACKTRACK message is sent to lower agent to force it rechoose its value.
-  | MsgNoGood i (NoGood i v)
+  | MsgNoGood (NoGood i v)
     -- | STOP message is sent when it is know that a problem has no solution.
   | MsgStop
   deriving (Show)
@@ -71,30 +71,30 @@ data NoGood i v = NoGood
 -- | Abstract interface used by ABT Kernel algorithm.
 data ABTKernelF i v next
   = -- | Send OK? message. See also 'send', 'sendOk', 'sendBacktrack' and 'sendStop'.
-    Send (Message i v) next
+    Send i (Message i v) next
     -- | Receive a message. See also 'recv'.
-  | Recv (Message i v -> next)
+  | Recv (i -> Message i v -> next)
   deriving (Functor)
 
 -- | Send a 'Message'.
-send :: MonadFree (ABTKernelF i v) m => Message i v -> m ()
-send msg = liftF $ Send msg ()
+send :: MonadFree (ABTKernelF i v) m => i -> Message i v -> m ()
+send i msg = liftF $ Send i msg ()
 
 -- | Receive a 'Message'.
-recv :: MonadFree (ABTKernelF i v) m => m (Message i v)
-recv = liftF $ Recv id
+recv :: MonadFree (ABTKernelF i v) m => m (i, Message i v)
+recv = liftF $ Recv (,)
 
 -- | Send OK? message. Requires address of another agent and a chosen value.
 sendOk :: MonadFree (ABTKernelF i v) m => i -> v -> m ()
-sendOk i v = send (MsgOk i v)
+sendOk i v = send i (MsgOk v)
 
 -- | Send BACKTRACK message. Requires address of another agent and resolved nogood store.
 sendBacktrack :: MonadFree (ABTKernelF i v) m => i -> (NoGood i v) -> m ()
-sendBacktrack i ngd = send (MsgNoGood i ngd)
+sendBacktrack i ngd = send i (MsgNoGood ngd)
 
 -- | Send STOP message to the *system*. All agents in the system will receive this message.
-sendStop :: MonadFree (ABTKernelF i v) m => m ()
-sendStop = send MsgStop
+sendStop :: MonadFree (ABTKernelF i v) m => i -> m ()
+sendStop i = send i MsgStop
 
 -- | Agent view is just a 'Map' from agents' adresses to agents' values.
 type AgentView i v = Map i v
@@ -150,12 +150,12 @@ msgLoop :: (Ord i, Eq v) => A i v ()
 msgLoop = do
   stop <- gets agStop
   unless stop $ do
-    msg <- recv
+    (src, msg) <- recv
     case msg of
-      MsgOk src val -> do
+      MsgOk val -> do
         agentUpdate src (Just val)
         checkAgentView
-      MsgNoGood src ngd -> do
+      MsgNoGood ngd -> do
         resolveConflict src ngd
       MsgStop -> do
         modify (\s -> s{ agStop = False })
@@ -180,7 +180,8 @@ resolveConflict sender ngd = do
 stopAgent :: A i v ()
 stopAgent = do
   modify (\s -> s{ agStop = False })
-  sendStop
+  (as, bs) <- gets (agAbove &&& agBelow)
+  mapM_ sendStop (as ++ bs)
 
 -- | Update agent's view.
 agentUpdate :: (Ord i, Eq v) => i -> Maybe v -> A i v ()
