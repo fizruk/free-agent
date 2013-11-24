@@ -15,13 +15,12 @@
 -- <http://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.60.4716>.
 ---------------------------------------------------------------------------
 module Control.Agent.Free.Algorithms.ABT (
+  module Control.Agent.Free.Interfaces.SendRecv
   -- * Algorithms
-    A
+  , A
   , abtKernel
   -- * ABT Kernel API
-  , ABTKernelF(..)
-  , send
-  , recv
+  , ABTKernelF
   , sendOk
   , sendBacktrack
   , sendStop
@@ -36,6 +35,7 @@ module Control.Agent.Free.Algorithms.ABT (
 
 import Control.Arrow
 import Control.Agent.Free
+import Control.Agent.Free.Interfaces.SendRecv
 import Control.Monad
 import Control.Monad.Free.Class
 import Control.Monad.State
@@ -69,20 +69,7 @@ data NoGood i v = NoGood
   deriving (Show)
 
 -- | Abstract interface used by ABT Kernel algorithm.
-data ABTKernelF i v next
-  = -- | Send OK? message. See also 'send', 'sendOk', 'sendBacktrack' and 'sendStop'.
-    Send i (Message i v) next
-    -- | Receive a message. See also 'recv'.
-  | Recv (i -> Message i v -> next)
-  deriving (Functor)
-
--- | Send a 'Message'.
-send :: MonadFree (ABTKernelF i v) m => i -> Message i v -> m ()
-send i msg = liftF $ Send i msg ()
-
--- | Receive a 'Message'.
-recv :: MonadFree (ABTKernelF i v) m => m (i, Message i v)
-recv = liftF $ Recv (,)
+type ABTKernelF i v = SendRecv i (Message i v)
 
 -- | Send OK? message. Requires address of another agent and a chosen value.
 sendOk :: MonadFree (ABTKernelF i v) m => i -> v -> m ()
