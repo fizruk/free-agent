@@ -37,7 +37,7 @@ module Control.Agent.Free.Algorithms.ABT (
 import Control.Arrow
 import Control.Agent.Free
 import Control.Monad
-import Control.Monad.Trans.Free
+import Control.Monad.Free.Class
 import Control.Monad.State
 
 import qualified Data.Foldable as F
