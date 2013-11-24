@@ -20,7 +20,6 @@ Library
   HS-Source-Dirs:       src
   GHC-Options:          -Wall
   Exposed-Modules:      Control.Agent.Free
-                        Control.Agent.Free.Internal
                         -- Algorithms
                         Control.Agent.Free.Algorithms.ABT
                         -- Environments
