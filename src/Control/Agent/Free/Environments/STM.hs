@@ -26,14 +26,17 @@ import Control.Monad.IO.Class
 import Data.Map (Map)
 import qualified Data.Map as Map
 
+-- | Parameters needed to run an interpreter.
 data SendRecvParams i msg = SendRecvParams
-  { sendRecvChans :: Map i (TChan (i, msg))
-  , sendRecvId    :: i
+  { sendRecvChans :: Map i (TChan (i, msg))   -- ^ Channels for messages.
+  , sendRecvId    :: i                        -- ^ Agent's ID.
   }
 
+-- | Initial parameter values.
 initSendRecvParams :: i -> SendRecvParams i msg
 initSendRecvParams = SendRecvParams Map.empty
 
+-- | Interpret 'SendRecv' interface using 'TChan's.
 interpretSendRecv :: (Ord i, MonadReader (SendRecvParams i msg) m, MonadIO m) => SendRecv i msg a -> m a
 interpretSendRecv (Send i msg next) = do
   myId <- asks sendRecvId
