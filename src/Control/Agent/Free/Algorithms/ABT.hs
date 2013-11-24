@@ -20,10 +20,11 @@ module Control.Agent.Free.Algorithms.ABT (
   , abtKernel
   -- * ABT Kernel API
   , ABTKernelF(..)
+  , send
+  , recv
   , sendOk
   , sendBacktrack
   , sendStop
-  , recv
   -- * Used data structures
   , Constraint(..)
   , Message(..)
@@ -75,10 +76,11 @@ data ABTKernelF i v next
   | Recv (Message i v -> next)
   deriving (Functor)
 
+-- | Send a 'Message'.
 send :: MonadFree (ABTKernelF i v) m => Message i v -> m ()
 send msg = liftF $ Send msg ()
 
--- | Receive message.
+-- | Receive a 'Message'.
 recv :: MonadFree (ABTKernelF i v) m => m (Message i v)
 recv = liftF $ Recv id
 
