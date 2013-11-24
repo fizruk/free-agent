@@ -12,7 +12,7 @@ import Control.Monad.Reader
 import Control.Monad.Trans.Identity
 
 import Control.Agent.Free
-import Control.Agent.Free.Algorithms.ABT (Message(..), ABTKernelF, AgentState(..), A, NoGood(..), Constraint(..), abtKernel, SendRecv(..))
+import Control.Agent.Free.Algorithms.ABT
 import qualified Control.Agent.Free.Algorithms.ABT as ABT
 
 import Control.Concurrent.STM
@@ -65,7 +65,7 @@ interpretF (Recv next) = do
   liftIO . putStrLn $ "DEBUG: Agent " ++ show agId ++ " is waiting for a message"
   chan <- asks $ agChan . (Map.! agId) . abtAgents
   msg  <- liftIO . atomically $ readTChan chan
-  liftIO . putStrLn $ "DEBUG: Agent " ++ show agId ++ " reads a message"
+  liftIO . putStrLn $ "DEBUG: Agent " ++ show agId ++ " reads a message " ++ show msg
   return (uncurry next msg)
 interpretF (Send dst msg next) = do
   agId <- asks abtAgentId
@@ -81,7 +81,7 @@ mkAgents cs = Map.mapWithKey mkState . Map.fromListWith (++) $ map leftC cs ++ m
   where
     leftC (ConstraintNE x y) = (x, [(y, Constraint $ \view v -> do
         v' <- Map.lookup y view
-        guard (v' /= v)
+        guard (v' == v)
         return (NoGood (Map.singleton y v') (x, v))
       )] )
     rightC (ConstraintNE x y) = leftC (ConstraintNE y x)
@@ -128,4 +128,5 @@ main = do
     constraints = 
       [ ConstraintNE 1 2
       , ConstraintNE 1 3
+      , ConstraintNE 2 3
       ]
