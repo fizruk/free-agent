@@ -173,7 +173,7 @@ stopAgent = do
 -- | Update agent's view.
 agentUpdate :: (Ord i, Eq v) => i -> Maybe v -> A i v ()
 agentUpdate src val = do
-  modify (\s@AgentState{agView=view} -> s{ agView = Map.update (const val) src view })
+  modify (\s@AgentState{agView=view} -> s{ agView = Map.alter (const val) src view })
   view <- gets agView
   updateNoGoods $ filter (coherent view . ngdLHS)
 
