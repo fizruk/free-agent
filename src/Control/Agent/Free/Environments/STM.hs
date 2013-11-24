@@ -1,3 +1,4 @@
+{-# LANGUAGE FlexibleContexts #-}
 ---------------------------------------------------------------------------
 -- |
 -- Module      :  Control.Agent.Free.Environments.STM
@@ -14,13 +15,13 @@ module Control.Agent.Free.Environments.STM (
   -- * SendRecv
     SendRecvParams(..)
   , initSendRecvParams
-  , SendRecvEnv
   , interpretSendRecv
 ) where
 
 import Control.Concurrent.STM
 import Control.Agent.Free.Interfaces
-import Control.Monad.Reader
+import Control.Monad.Reader.Class
+import Control.Monad.IO.Class
 
 import Data.Map (Map)
 import qualified Data.Map as Map
@@ -33,9 +34,7 @@ data SendRecvParams i msg = SendRecvParams
 initSendRecvParams :: i -> SendRecvParams i msg
 initSendRecvParams = SendRecvParams Map.empty
 
-type SendRecvEnv i msg = ReaderT (SendRecvParams i msg) IO
-
-interpretSendRecv :: (Ord i) => SendRecv i msg a -> SendRecvEnv i msg a
+interpretSendRecv :: (Ord i, MonadReader (SendRecvParams i msg) m, MonadIO m) => SendRecv i msg a -> m a
 interpretSendRecv (Send i msg next) = do
   myId <- asks sendRecvId
   chan <- asks $ (Map.! i) . sendRecvChans
