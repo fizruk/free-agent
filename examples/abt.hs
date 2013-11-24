@@ -67,21 +67,21 @@ interpretF (Recv next) = do
   msg  <- liftIO . atomically $ readTChan chan
   liftIO . putStrLn $ "DEBUG: Agent " ++ show agId ++ " reads a message"
   return (next msg)
-interpretF (SendOk dst val next) = do
+interpretF (Send (MsgOk dst val) next) = do
   agId <- asks abtAgentId
   chan <- asks $ agChan . (Map.! dst) . abtAgents
   let msg = MsgOk agId val
   liftIO . atomically $ writeTChan chan msg
   liftIO . putStrLn $ "DEBUG: Agent " ++ show agId ++ " sent MsgOk"
   return next
-interpretF (SendBacktrack dst ngd next) = do
+interpretF (Send (MsgNoGood dst ngd) next) = do
   agId <- asks abtAgentId
   chan <- asks $ agChan . (Map.! dst) . abtAgents
   let msg = MsgNoGood agId ngd
   liftIO . atomically $ writeTChan chan msg
   liftIO . putStrLn $ "DEBUG: Agent " ++ show agId ++ " sent MsgNoGood"
   return next
-interpretF (SendStop next) = do
+interpretF (Send MsgStop next) = do
   cs <- asks $ map agChan . Map.elems . abtAgents
   forM_ cs $ \chan -> do
     liftIO . atomically $ writeTChan chan MsgStop
