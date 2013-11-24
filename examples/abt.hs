@@ -13,7 +13,7 @@ import Control.Monad.Trans.Identity
 
 import Control.Agent.Free
 import Control.Agent.Free.Algorithms.ABT
-import qualified Control.Agent.Free.Algorithms.ABT as ABT
+import Control.Agent.Free.Environments.STM
 
 import Control.Concurrent.STM
 import Control.Concurrent
@@ -34,45 +34,16 @@ type AgentId = Int
 type SenderId = AgentId
 type AgentValue = Color
 
-data AgentProps = AgentProps
-  { agChan  :: TChan (AgentId, Message AgentId AgentValue)
-  }
-
-data AbtState = AbtState
-  { abtAgents   :: Map AgentId AgentProps
-  , abtAgentId  :: AgentId
-  }
-
-initAbtState :: AbtState
-initAbtState = AbtState
-  { abtAgents   = Map.empty
-  , abtAgentId  = error "called outside of agent code"
-  }
-
-newtype ABT a = ABT { runABT :: ReaderT AbtState IO a } deriving (Functor, Monad, MonadIO, MonadReader AbtState, MonadParallel, MonadFork)
-
 data ConstraintNE var = ConstraintNE var var deriving (Eq, Ord, Show)
 
-exec :: AgentState AgentId AgentValue -> A AgentId AgentValue a -> ABT a
+exec :: (Ord i, MonadReader (SendRecvParams i (Message i v)) m, MonadIO m) => AgentState i v -> A i v a -> m a
 exec s m = execAgent' (join . interpretF) $ evalStateT m s
 
-execABT :: Map AgentId AgentProps -> ABT a -> IO a
-execABT agents = flip runReaderT initAbtState{abtAgents=agents} . runABT
-
-interpretF :: ABTKernelF AgentId AgentValue a -> ABT a
-interpretF (Recv next) = do
-  agId <- asks abtAgentId
-  liftIO . putStrLn $ "DEBUG: Agent " ++ show agId ++ " is waiting for a message"
-  chan <- asks $ agChan . (Map.! agId) . abtAgents
-  msg  <- liftIO . atomically $ readTChan chan
-  liftIO . putStrLn $ "DEBUG: Agent " ++ show agId ++ " reads a message " ++ show msg
-  return (uncurry next msg)
-interpretF (Send dst msg next) = do
-  agId <- asks abtAgentId
-  chan <- asks $ agChan . (Map.! dst) . abtAgents
-  liftIO . atomically $ writeTChan chan (agId, msg)
-  liftIO . putStrLn $ "DEBUG: Agent " ++ show agId ++ " sent " ++ show msg
-  return next
+interpretF :: (Ord i, MonadReader (SendRecvParams i msg) m, MonadIO m) => SendRecv i msg a -> m a
+interpretF f = do
+  myId <- asks sendRecvId
+  -- liftIO . putStrLn $ "Agent " ++ show myId ++ ": " ++ show (void f)
+  interpretSendRecv f
 
 -- ----------------------------------------------------------------------
 
@@ -86,7 +57,7 @@ mkAgents cs = Map.mapWithKey mkState . Map.fromListWith (++) $ map leftC cs ++ m
       )] )
     rightC (ConstraintNE x y) = leftC (ConstraintNE y x)
 
-    mkState k cs = ABT.initialAgentState
+    mkState k cs = initialAgentState
       { agConstraints  = map snd cs
       , agAbove        = filter (> k) $ map fst cs
       , agBelow        = filter (< k) $ map fst cs
@@ -100,11 +71,10 @@ solve cs = do
       ids    = map fst agents
   xs <- forM agents $ \(agId, agState) -> do
     chan <- atomically $ newTChan
-    let props    = AgentProps chan
-    return (agId, props, agState)
+    return (agId, chan, agState)
   let ps  = Map.fromList $ map (\(x, y, _) -> (x, y)) xs
       ags = map (\(x, _, z) -> (x, z)) xs
-  execABT ps $ do
+  flip runReaderT (SendRecvParams ps undefined) $ do
     waitAll <- forM ags $ \(agId, agState) -> do
       waitRes <- forkExec $ do
         liftIO . putStrLn $ "new agent started!"
@@ -116,7 +86,7 @@ solve cs = do
       return (agId, x)
     return $ Map.fromList res
   where
-    setAgentId agId s = s{abtAgentId = agId}
+    setAgentId agId s = s{sendRecvId = agId}
 
 main :: IO ()
 main = do
@@ -128,5 +98,8 @@ main = do
     constraints = 
       [ ConstraintNE 1 2
       , ConstraintNE 1 3
+      , ConstraintNE 1 4
       , ConstraintNE 2 3
+      , ConstraintNE 2 4
+      , ConstraintNE 3 4
       ]
