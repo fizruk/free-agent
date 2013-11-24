@@ -145,7 +145,7 @@ msgLoop = do
       MsgBacktrack ngd -> do
         resolveConflict src ngd
       MsgStop -> do
-        modify (\s -> s{ agStop = True })
+        modify (\s -> s{ agStop = True, agValue = Nothing })
     msgLoop
 
 -- | Resolve conflict by
@@ -166,7 +166,7 @@ resolveConflict sender ngd = do
 -- The solution does not exist.
 stopAgent :: A i v ()
 stopAgent = do
-  modify (\s -> s{ agStop = True })
+  modify (\s -> s{ agStop = True, agValue = Nothing })
   (as, bs) <- gets (agAbove &&& agBelow)
   mapM_ sendStop (as ++ bs)
 
