@@ -16,7 +16,7 @@
 module Control.Agent.Free where
 
 import Control.Monad
-import Control.Monad.Trans.Free
+import Control.Monad.Trans.Free.Church
 import Control.Monad.Trans.Class
 import Control.Monad.Trans.Identity
 
@@ -29,7 +29,7 @@ import Control.Monad.Trans.Identity
 -- for the possibility of `behaviosites' (see
 -- <http://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.114.4071> for
 -- more details).
-type Agent f t (m :: * -> *) = FreeT f (t m)
+type Agent f t (m :: * -> *) = FT f (t m)
 
 -- | An 'Agent' without any exposed structure.
 type Agent' f m = Agent f IdentityT m
@@ -39,8 +39,8 @@ type FMT f m t = (Functor f, Monad m, MonadTrans t, Monad (t m))
 
 -- | @'transform' phi agent@ applies @phi@ to each low-level API command
 -- in @agent@ program. This is the basis for `behaviosites'.
-transform :: (FMT f m t) => (f (t m a) -> t m a) -> FreeT f m a -> t m a
-transform f = iterT f . hoistFreeT lift
+transform :: (FMT f m t) => (f (t m a) -> t m a) -> FT f m a -> t m a
+transform f = iterT f . hoistFT lift
 
 -- | Execute an agent program with particular interpreter.
 -- @'execAgent' int agent@ give an interpretation to the low-level API.
