@@ -9,7 +9,7 @@
 -- Stability   :  experimental
 -- Portability :  ghc
 --
--- Common interfaces.
+-- Concurrent environments (interpreters) for common interfaces.
 ---------------------------------------------------------------------------
 module Control.Agent.Free.Environments.STM (
   -- * SendRecv
