@@ -27,6 +27,7 @@ Library
                         -- Interfaces
                         Control.Agent.Free.Interfaces
                         Control.Agent.Free.Interfaces.SendRecv
+                        Control.Agent.Free.Interfaces.DirectoryService
   Build-Depends:        base >= 4 && < 5
                       , free >= 4.2
                       , transformers >= 0.3

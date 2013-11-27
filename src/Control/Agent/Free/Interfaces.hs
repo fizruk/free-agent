@@ -12,7 +12,9 @@
 ---------------------------------------------------------------------------
 module Control.Agent.Free.Interfaces (
     module Control.Agent.Free.Interfaces.SendRecv
+  , module Control.Agent.Free.Interfaces.DirectoryService
 ) where
 
 import Control.Agent.Free.Interfaces.SendRecv
+import Control.Agent.Free.Interfaces.DirectoryService
 
