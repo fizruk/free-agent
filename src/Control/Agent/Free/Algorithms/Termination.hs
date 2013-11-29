@@ -13,13 +13,15 @@
 -- Termination detection algorithms.
 ---------------------------------------------------------------------------
 module Control.Agent.Free.Algorithms.Termination (
+  -- * Termination by distributed snapshots
+    addTerminationBySnapshots
+  , MessageSnapshot(..)
 ) where
 
 import Control.Arrow
 import Control.Agent.Free
 import Control.Agent.Free.Interfaces.SendRecv
 import Control.Monad.State
-import Control.Monad.Trans.Free
 
 data MessageSnapshot msg
   = MsgSnapshotRequest
@@ -27,7 +29,7 @@ data MessageSnapshot msg
   deriving (Show)
 
 addTerminationBySnapshots :: (Ord i, Monad (t m)) => i -> [i] -> Agent (SendRecv i msg) t m a -> Agent (SendRecv i (Int, MessageSnapshot msg)) t m a
-addTerminationBySnapshots myId neighbors = flip evalStateT (0, myId) . transform transF . hoistFreeT lift
+addTerminationBySnapshots myId neighbors = flip evalStateT (0, myId) . transformWith (lift . lift) transF
   where
     transF (Send i msg next) = do
       time <- gets fst
