@@ -37,10 +37,16 @@ type Agent' f m = Agent f IdentityT m
 -- | A constraint synonym to make type signatures less scary.
 type FMT f m t = (Functor f, Monad m, MonadTrans t, Monad (t m))
 
--- | @'transform' phi agent@ applies @phi@ to each low-level API command
+-- | @'transformWith' phi f agent@ applies @f@ to each low-level API command
+-- in @agent@ program. @phi@ is used to handle inner @m@ effects.
+-- This function is the basis for `behaviosites'.
+transformWith :: (Functor f, Monad m, Monad n) => (forall b. m b -> n b) -> (f (n a) -> n a) -> FreeT f m a -> n a
+transformWith phi f = iterT f . hoistFreeT phi
+
+-- | @'transform' f agent@ applies @f@ to each low-level API command
 -- in @agent@ program. This is the basis for `behaviosites'.
 transform :: (FMT f m t) => (f (t m a) -> t m a) -> FreeT f m a -> t m a
-transform f = iterT f . hoistFreeT lift
+transform = transformWith lift
 
 -- | Execute an agent program with particular interpreter.
 -- @'execAgent' int agent@ give an interpretation to the low-level API.
