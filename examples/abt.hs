@@ -1,5 +1,3 @@
-{-# LANGUAGE DeriveFunctor #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE RankNTypes #-}
@@ -95,7 +93,7 @@ main = do
   forM_ (Map.toList res) $ \(k, v) -> do
     putStrLn $ show k ++ " -> " ++ show v
   where
-    constraints = 
+    constraints =
       [ ConstraintNE 1 2
       , ConstraintNE 1 3
       , ConstraintNE 1 4

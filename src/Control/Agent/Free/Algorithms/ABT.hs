@@ -1,4 +1,3 @@
-{-# LANGUAGE DeriveFunctor #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE RankNTypes #-}
 ---------------------------------------------------------------------------
@@ -76,7 +75,7 @@ sendOk :: MonadFree (ABTKernelF i v) m => i -> v -> m ()
 sendOk i v = send i (MsgOk v)
 
 -- | Send BACKTRACK message. Requires address of another agent and resolved nogood store.
-sendBacktrack :: MonadFree (ABTKernelF i v) m => i -> (NoGood i v) -> m ()
+sendBacktrack :: MonadFree (ABTKernelF i v) m => i -> NoGood i v -> m ()
 sendBacktrack i ngd = send i (MsgBacktrack ngd)
 
 -- | Send STOP message to the *system*. All agents in the system will receive this message.
@@ -197,7 +196,7 @@ checkAgentView = do
       -- value chosen
       Just x  -> do
         ids <- gets agAbove
-        mapM_ (flip sendOk x) ids
+        mapM_ (`sendOk` x) ids
 
 -- | Try to choose a value w.r.t. nogood store, constraints
 -- and current view.
@@ -207,7 +206,7 @@ chooseValue = do
   xs   <- gets agDomain >>= eliminateNoGoods -- FIXME: too strict
   -- check the rest for consistency with constraints
   view <- gets agView
-  cs   <- gets $ map (flip constraintCheck view) . agConstraints
+  cs   <- gets $ map (`constraintCheck` view) . agConstraints
   let (ngds, v) = choose (msum . zipWith ($) cs . repeat) xs
   updateNoGoods (ngds ++)
   return v
