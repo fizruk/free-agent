@@ -7,24 +7,18 @@ import Control.Monad.Trans.Free
 import Control.Monad.State
 import Control.Monad.Reader
 
-import Control.Monad.Trans.Identity
-
 import Control.Agent.Free
 import Control.Agent.Free.Algorithms.ABT
 import Control.Agent.Free.Environments.STM
 
-import Control.Concurrent.STM
-import Control.Concurrent
+import Control.Concurrent.STM (atomically, newTChan)
 
 import Data.Maybe (listToMaybe, fromMaybe)
 
 import Data.Map (Map)
 import qualified Data.Map as Map
 
-import Data.Set (Set)
-import qualified Data.Set as Set
-
-import Control.Monad.Parallel (MonadParallel, MonadFork(..))
+import Control.Monad.Parallel (forkExec)
 
 data Color = Red | Green | Blue deriving (Eq, Ord, Enum, Bounded, Show)
 
@@ -35,13 +29,7 @@ type AgentValue = Color
 data ConstraintNE var = ConstraintNE var var deriving (Eq, Ord, Show)
 
 exec :: (Ord i, MonadReader (SendRecvParams i (Message i v)) m, MonadIO m) => AgentState i v -> A i v a -> m a
-exec s m = execAgent' (join . interpretF) $ evalStateT m s
-
-interpretF :: (Ord i, MonadReader (SendRecvParams i msg) m, MonadIO m) => SendRecv i msg a -> m a
-interpretF f = do
-  myId <- asks sendRecvId
-  -- liftIO . putStrLn $ "Agent " ++ show myId ++ ": " ++ show (void f)
-  interpretSendRecv f
+exec s m = execAgent' (join . interpretSendRecv) $ evalStateT m s
 
 -- ----------------------------------------------------------------------
 
