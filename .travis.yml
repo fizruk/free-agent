@@ -1,19 +1,14 @@
-# Haskell Platform 2014.2.0.0
-# GHC: 7.8.3
+# Haskell Platform 2013.2.0.0
+# GHC: 7.6.3
 
 before_install:
   # ==============================
   #  Prepare Haskell environment
   # ==============================
   #
-  # download and install generic Linux binaries
-  - sudo wget -O /haskell-platform.tar.gz https://www.haskell.org/platform/download/2014.2.0.0/haskell-platform-2014.2.0.0-unknown-linux-x86_64.tar.gz
-  - cd / && sudo tar xvf haskell-platform.tar.gz
-  - sudo /usr/local/haskell/ghc-7.8.3-x86_64/bin/activate-hs
-
-  # Haskell needs this
+  # install Haskell Platform from Ubuntu repositories
   - sudo apt-get update -qq
-  - sudo apt-get --yes --force-yes -qq install libgmp-dev
+  - sudo apt-get --yes --force-yes -qq install haskell-platform
 
   # ====================================
   #  This should be done for each build
