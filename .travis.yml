@@ -7,6 +7,13 @@ before_install:
   - cd / && sudo tar xvf haskell-platform.tar.gz
   - sudo /usr/local/haskell/ghc-7.8.3-x86_64/bin/activate-hs
 
+  # show GHC and Cabal versions
+  - ghc --version
+  - cabal --version
+
+  # update Cabal database
+  - cabal update
+
 # install project dependencies
 install:
   - cabal install --only-dependencies --enable-tests
