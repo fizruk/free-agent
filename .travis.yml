@@ -3,7 +3,7 @@
 
 # download and install generic Linux binaries
 before_install:
-  - wget -O haskell-platform.tar.gz https://www.haskell.org/platform/download/2014.2.0.0/haskell-platform-2014.2.0.0-unknown-linux-x86_64.tar.gz
+  - sudo wget -O /haskell-platform.tar.gz https://www.haskell.org/platform/download/2014.2.0.0/haskell-platform-2014.2.0.0-unknown-linux-x86_64.tar.gz
   - cd / && sudo tar xvf haskell-platform.tar.gz
   - sudo /usr/local/haskell/ghc-7.8.3-x86-64/bin/activate-hs
 
