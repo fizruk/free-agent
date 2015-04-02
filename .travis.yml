@@ -1,11 +1,22 @@
 # Haskell Platform 2014.2.0.0
 # GHC: 7.8.3
 
-# download and install generic Linux binaries
 before_install:
+  # ==============================
+  #  Prepare Haskell environment
+  # ==============================
+  #
+  # download and install generic Linux binaries
   - sudo wget -O /haskell-platform.tar.gz https://www.haskell.org/platform/download/2014.2.0.0/haskell-platform-2014.2.0.0-unknown-linux-x86_64.tar.gz
   - cd / && sudo tar xvf haskell-platform.tar.gz
   - sudo /usr/local/haskell/ghc-7.8.3-x86_64/bin/activate-hs
+
+  # Haskell needs this
+  - sudo apt-get install libgmp
+
+  # ====================================
+  #  This should be done for each build
+  # ====================================
 
   # show GHC and Cabal versions
   - ghc --version
