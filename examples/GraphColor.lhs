@@ -1,7 +1,17 @@
+-- BEGIN GraphColor.lhs
+{- $example
+This is literate Haskell! To run the example, open the source and copy
+this comment block into a new file with '.lhs' extension. Compiling to an executable
+file with the @-O2@ optimization level and @-threaded -rtsopts@ options is recomended.
+
+For example: @ghc -o 'graph-color' -O2 -threaded -rtsopts GraphColor.lhs ; ./graph-color@
+
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE RankNTypes #-}
 module Main where
 
+import Control.Monad.Trans.Free
 import Control.Monad.State
 import Control.Monad.Reader
 
@@ -10,6 +20,8 @@ import Control.Agent.Free.Algorithms.ABT
 import Control.Agent.Free.Environments.STM
 
 import Control.Concurrent.STM (atomically, newTChan)
+
+import Data.Maybe (listToMaybe, fromMaybe)
 
 import Data.Map (Map)
 import qualified Data.Map as Map
@@ -52,7 +64,7 @@ solve cs = do
   let agents = Map.toList $ mkAgents cs
       ids    = map fst agents
   xs <- forM agents $ \(agId, agState) -> do
-    chan <- atomically newTChan
+    chan <- atomically $ newTChan
     return (agId, chan, agState)
   let ps  = Map.fromList $ map (\(x, y, _) -> (x, y)) xs
       ags = map (\(x, _, z) -> (x, z)) xs
